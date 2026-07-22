@@ -72,21 +72,53 @@ opkg install luci-app-nlbwmon
 opkg install luci-app-filetransfer
 ```
 
-## 五、配置建议
+## 五、常见问题修复
 
-### 5.1 时区设置
+### 5.1 IPv6 WAN Status 显示 "? Not connected"
+
+**问题**：Luci 概览页 IPv6 WAN Status 显示 `? Not connected`，但实际 IPv6 可通。
+
+**根因**：Luci 从 `lan` 接口的 ubus 数据中找 IPv6 默认路由，但 `/etc/config/network` 未显式声明 IPv6 网关。
+
+**修复**：
+
+```bash
+docker exec -it openwrt sh -c "
+  uci add_list network.lan.ip6route='::/0'
+  uci set network.lan.ip6gw='fe80::1'
+  uci commit network
+  /etc/init.d/network restart
+"
+```
+
+修复后刷新 Luci 页面，IPv6 地址和网关信息恢复正常显示。
+
+### 5.2 不要在 Luci 中添加新网桥
+
+⚠️ **绝对不要在 Network → Interfaces 中添加新网桥**（如 br-LAN6）。Docker 容器内的 OpenWrt 无法修改宿主机内核级网桥，添加网桥会导致 `br-xxx` 抢占物理网口，外部流量全断。如果误操作，需从宿主机进入容器删除网桥恢复：
+
+```bash
+docker exec openwrt ip link del br-LAN6
+docker exec openwrt uci delete network.LAN6 2>/dev/null
+docker exec openwrt uci commit network
+docker exec openwrt /etc/init.d/network restart
+```
+
+## 六、配置建议
+
+### 6.1 时区设置
 
 Luci → System → System → Timezone → `Asia/Shanghai`
 
-### 5.2 修改 HTTPS 端口（可选）
+### 6.2 修改 HTTPS 端口（可选）
 
 Luci → System → Web Admin → 修改端口为 8443 或其他。
 
-### 5.3 固件更新与备份
+### 6.3 固件更新与备份
 
 建议在 Luci → System → Backup/Flash Firmware 中定期备份配置。
 
-### 5.4 PassWall 配置流程
+### 6.4 PassWall 配置流程
 
 1. 进入 Services → PassWall
 2. 主开关 → 启用

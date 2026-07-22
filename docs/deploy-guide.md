@@ -148,7 +148,68 @@ IP 地址：    192.168.3.X（主路由 DHCP 分配）
 DNS 服务器： 192.168.3.A
 ```
 
-## 十、管理命令
+## 十、IPv6 配置与排坑
+
+> 部署过程中遇到了两个 IPv6 的实际问题，下面一并说明。
+
+### 问题 1：IPv6 地址冲突（ipvlan 模式）
+
+**现象**：容器获取 IPv6 SLAAC 地址后，与宿主机 IPv6 地址相同，导致网络不稳定。
+
+**根因**：如果使用 **ipvlan L2** 模式，容器共享宿主机 MAC 地址。主路由 SLAAC 根据 MAC 生成 IPv6 地址后缀（EUI-64），宿主机和容器拿到同一个地址 → 地址冲突。
+
+**解法**：使用 **macvlan** 模式（本项目默认方案），每个容器有独立 MAC，SLAAC 自动分配唯一 IPv6 地址。
+
+```bash
+# macvlan 模式下检查容器的 IPv6 地址（应是唯一的）
+docker exec openwrt ip -6 addr show eth0
+
+# 如果还出现冲突，可手动指定 IPv6 地址
+docker exec openwrt sh -c "
+  uci set network.lan.ip6assign='64'
+  uci set network.lan.ip6hint='A'   # 或自定义后缀
+  uci commit network
+  /etc/init.d/network restart
+"
+```
+
+### 问题 2：Luci 页面 IPv6 WAN Status 显示 "? Not connected"
+
+**现象**：Luci 概览页 → IPv6 WAN Status 显示 `? Not connected`，但实际 `ping6` 外网是通的。
+
+**根因**：Luci 的 `get_wan6net()` 函数在 `lan` 接口的 ubus 数据中寻找 IPv6 默认路由。由于 Docker 容器的 IPv6 默认路由由内核自动添加（fe80::1 dev eth0），但 `/etc/config/network` 中 `lan` 段**没有显式声明 IPv6 网关**，ubus 数据里找不到 → 显示 `?`。
+
+**修复**：在 `/etc/config/network` 的 `lan` 段添加两行：
+
+```bash
+docker exec -it openwrt sh -c "
+  uci add_list network.lan.ip6route='::/0'
+  uci set network.lan.ip6gw='fe80::1'
+  uci commit network
+  /etc/init.d/network restart
+"
+```
+
+修复后 Luci 正确显示 IPv6 地址和网关信息。
+
+### 常见 IPv6 检查命令
+
+```bash
+# 检查容器 IPv6 地址
+docker exec openwrt ip -6 addr show
+
+# 检查 IPv6 路由
+docker exec openwrt ip -6 route show
+
+# 测试 IPv6 连通性
+docker exec openwrt ping6 -c 3 2400:3200::1
+docker exec openwrt ping6 -c 3 2001:4860:4860::8888
+
+# 查看 Luci 状态页
+curl -s http://192.168.3.A/cgi-bin/luci/admin/status/overview 2>/dev/null | grep -i ipv6
+```
+
+## 十一、管理命令
 
 ```bash
 docker logs openwrt              # 查看日志
