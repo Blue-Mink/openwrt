@@ -1,0 +1,11 @@
+.DS_Store
+*.swp
+*.swo
+*~
+*.tar
+*.tar.gz
+*.ipk
+*.log
+.vscode/
+.idea/
+__pycache__/

@@ -9,15 +9,25 @@
 
 ---
 
-## 一、拉取镜像
+## 一、获取镜像
 
-OpenWrt 官方镜像不发布 32-bit ARM 版本，使用社区镜像：
+### 方式一：从 Docker Hub 拉取
 
 ```bash
 docker pull sulinggg/openwrt:arm_cortex-a7_neon-vfpv4
 ```
 
 镜像大小约 75MB，运行层约 150MB。
+
+### 方式二：从 Release 离线导入
+
+如果设备无法直接访问 Docker Hub，可从仓库 Release 下载镜像包后导入：
+
+```bash
+# 下载 https://github.com/Blue-Mink/openwrt/releases/download/v1.0.0/openwrt-armv7.tar.gz
+# 上传到设备后执行：
+gunzip -c openwrt-armv7.tar.gz | docker load
+```
 
 ## 二、创建 macvlan 网络
 
@@ -55,6 +65,7 @@ docker run -d \
 macvlan 模式下宿主机默认无法访问 macvlan 容器，需在宿主机上创建虚拟接口：
 
 ```bash
+# 创建 macvlan-host 虚拟接口
 ip link add macvlan-host link eth0 type macvlan mode bridge
 ip addr add 192.168.3.B/24 dev macvlan-host
 ip link set macvlan-host up
@@ -75,7 +86,17 @@ ip link set macvlan-host up
 ip route add 192.168.3.A/32 dev macvlan-host
 ```
 
-## 六、配置 OpenWrt 软件源
+## 六、首次登录修改密码
+
+进入容器修改默认密码（安全第一步）：
+
+```bash
+docker exec -it openwrt passwd
+```
+
+然后访问 `http://192.168.3.A`，用 `root` 和新密码登录。
+
+## 七、配置 OpenWrt 软件源
 
 进入容器：
 
@@ -105,7 +126,7 @@ option check_signature 0
 opkg update
 ```
 
-## 七、安装必要插件
+## 八、安装必要插件
 
 ```bash
 opkg install luci-i18n-base-zh-cn \
@@ -116,18 +137,18 @@ opkg install luci-i18n-base-zh-cn \
   luci-app-filetransfer
 ```
 
-## 八、旁路由使用
+## 九、旁路由使用
 
 将局域网设备的默认网关指向容器 IP `192.168.3.A`：
 
 ```
-IP 地址：    192.168.3.xxx（主路由 DHCP 分配）
+IP 地址：    192.168.3.X（主路由 DHCP 分配）
 子网掩码：   255.255.255.0
 默认网关：   192.168.3.A  ← 旁路由
 DNS 服务器： 192.168.3.A
 ```
 
-## 九、管理命令
+## 十、管理命令
 
 ```bash
 docker logs openwrt              # 查看日志

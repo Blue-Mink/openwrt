@@ -10,7 +10,7 @@
 |------|-----|
 | **地址** | `http://192.168.3.A` |
 | **用户名** | `root` |
-| **密码** | `admin`（首次登录请立即修改） |
+| **密码** | `admin`（**首次登录请立即修改**） |
 
 **修改密码**：
 
@@ -18,7 +18,17 @@
 docker exec -it openwrt passwd
 ```
 
-## 二、预装插件（27+）
+## 二、⚠️ 硬件限制提醒
+
+| 限制项 | 说明 |
+|--------|------|
+| **RAM** | 仅 720MB，**不要同时装多个科学上网插件**（PassWall + SSR-Plus + OpenClash 同时运行会 OOM） |
+| **存储** | 容器内剩余空间有限，插件装太多会存满 |
+| **虚拟接口** | **不要在 Luci 网络 → 接口 中添加新网桥**，Docker 容器不允许修改内核级网桥，加了会断网，只能通过 ip link 在宿主机操作 |
+
+> **推荐方案**：只装 **PassWall + SmartDNS**，轻量稳定，已足够日常使用。
+
+## 三、预装插件（27+）
 
 镜像自带的核心插件套装：
 
@@ -40,13 +50,13 @@ LuCI 完整菜单含 **37 个功能模块**，涵盖：
 - **VPN** — N2N、SoftEther、ZeroTier
 - **Network** — 接口、DHCP/DNS、主机名、路由、诊断、防火墙、TurboACC、带宽监控
 
-## 三、推荐插件安装
+## 四、推荐插件安装
 
 ```bash
 # 中文界面
 opkg install luci-i18n-base-zh-cn
 
-# 科学上网（轻量稳定）
+# 科学上网（选一个即可，推荐 PassWall）
 opkg install luci-app-passwall
 
 # DNS 优化
@@ -62,21 +72,21 @@ opkg install luci-app-nlbwmon
 opkg install luci-app-filetransfer
 ```
 
-## 四、配置建议
+## 五、配置建议
 
-### 4.1 时区设置
+### 5.1 时区设置
 
 Luci → System → System → Timezone → `Asia/Shanghai`
 
-### 4.2 修改 HTTPS 端口（可选）
+### 5.2 修改 HTTPS 端口（可选）
 
 Luci → System → Web Admin → 修改端口为 8443 或其他。
 
-### 4.3 固件更新与备份
+### 5.3 固件更新与备份
 
 建议在 Luci → System → Backup/Flash Firmware 中定期备份配置。
 
-### 4.4 PassWall 配置流程
+### 5.4 PassWall 配置流程
 
 1. 进入 Services → PassWall
 2. 主开关 → 启用

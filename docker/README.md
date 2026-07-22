@@ -45,45 +45,7 @@ gunzip -c openwrt-armv7.tar.gz | docker load
 | **预装插件** | 27+ 个核心插件 |
 | **镜像大小** | ~75MB（压缩） |
 
-## 三、Dockerfile 参考
-
-```dockerfile
-FROM arm32v7/debian:bullseye-slim AS builder
-
-# 如果希望从源码构建 OpenWrt 根文件系统（高级用户）
-# 此仅为参考模板，实际使用建议直接 pull 预构建镜像
-
-FROM scratch
-# 实际生产环境直接使用 sulinggg/openwrt:arm_cortex-a7_neon-vfpv4
-```
-
-> **注意**：`sulinggg/openwrt:arm_cortex-a7_neon-vfpv4` 是最后一个支持 `arm_cortex-a7` 32-bit 的版本，建议直接拉取使用。
-
-## 四、镜像导出脚本
-
-创建 `scripts/export-image.sh`：
-
-```bash
-#!/bin/sh
-# Docker OpenWrt 镜像导出脚本
-
-IMAGE="sulinggg/openwrt:arm_cortex-a7_neon-vfpv4"
-OUTPUT="openwrt-armv7.tar.gz"
-
-echo "=== 拉取最新镜像 ==="
-docker pull "$IMAGE"
-
-echo "=== 导出镜像 ==="
-docker save "$IMAGE" -o "${OUTPUT%.gz}"
-
-echo "=== 压缩 ==="
-gzip -f "${OUTPUT%.gz}"
-
-echo "=== 完成: ${OUTPUT} ==="
-ls -lh "$OUTPUT"
-```
-
-## 五、多架构支持说明
+## 三、多架构支持说明
 
 | 架构 | 镜像 | 说明 |
 |------|------|------|
@@ -91,7 +53,11 @@ ls -lh "$OUTPUT"
 | arm64 (aarch64) | `sulinggg/openwrt:arm64_armv8-a` | 64位 ARM 设备 |
 | amd64 (x86_64) | `openwrt/rootfs:latest`（官方） | x86 设备 |
 
-## 六、验证镜像完整性
+## 四、导出脚本
+
+参考 [`scripts/export-image.sh`](../scripts/export-image.sh) 一键导出镜像包。
+
+## 五、验证镜像完整性
 
 ```bash
 # 查看镜像信息
