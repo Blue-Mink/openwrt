@@ -1,0 +1,105 @@
+# Docker 镜像与构建
+
+> OpenWrt ARM 32-bit（arm_cortex-a7_neon-vfpv4）Docker 镜像的获取、使用与构建说明。
+
+---
+
+## 一、获取镜像
+
+### 方式一：从 Docker Hub 拉取（推荐）
+
+```bash
+docker pull sulinggg/openwrt:arm_cortex-a7_neon-vfpv4
+```
+
+### 方式二：离线导入
+
+在能连接 Docker Hub 的环境先保存：
+
+```bash
+# 导出镜像为 tar 包
+docker save sulinggg/openwrt:arm_cortex-a7_neon-vfpv4 -o openwrt-armv7.tar
+
+# 压缩（可选）
+gzip openwrt-armv7.tar
+
+# 在目标设备导入
+docker load -i openwrt-armv7.tar
+# 或
+gunzip -c openwrt-armv7.tar.gz | docker load
+```
+
+### 方式三：自行构建
+
+参考本目录下的 `Dockerfile` 自行构建镜像。
+
+## 二、镜像信息
+
+| 项目 | 值 |
+|------|-----|
+| **镜像名** | `sulinggg/openwrt:arm_cortex-a7_neon-vfpv4` |
+| **基础系统** | ImmortalWrt 18.06-k5.4-SNAPSHOT |
+| **架构** | arm_cortex-a7_neon-vfpv4 |
+| **内核** | 共享宿主机内核（Docker 容器） |
+| **包管理器** | opkg |
+| **预装插件** | 27+ 个核心插件 |
+| **镜像大小** | ~75MB（压缩） |
+
+## 三、Dockerfile 参考
+
+```dockerfile
+FROM arm32v7/debian:bullseye-slim AS builder
+
+# 如果希望从源码构建 OpenWrt 根文件系统（高级用户）
+# 此仅为参考模板，实际使用建议直接 pull 预构建镜像
+
+FROM scratch
+# 实际生产环境直接使用 sulinggg/openwrt:arm_cortex-a7_neon-vfpv4
+```
+
+> **注意**：`sulinggg/openwrt:arm_cortex-a7_neon-vfpv4` 是最后一个支持 `arm_cortex-a7` 32-bit 的版本，建议直接拉取使用。
+
+## 四、镜像导出脚本
+
+创建 `scripts/export-image.sh`：
+
+```bash
+#!/bin/sh
+# Docker OpenWrt 镜像导出脚本
+
+IMAGE="sulinggg/openwrt:arm_cortex-a7_neon-vfpv4"
+OUTPUT="openwrt-armv7.tar.gz"
+
+echo "=== 拉取最新镜像 ==="
+docker pull "$IMAGE"
+
+echo "=== 导出镜像 ==="
+docker save "$IMAGE" -o "${OUTPUT%.gz}"
+
+echo "=== 压缩 ==="
+gzip -f "${OUTPUT%.gz}"
+
+echo "=== 完成: ${OUTPUT} ==="
+ls -lh "$OUTPUT"
+```
+
+## 五、多架构支持说明
+
+| 架构 | 镜像 | 说明 |
+|------|------|------|
+| arm_cortex-a7 (32-bit) | `sulinggg/openwrt:arm_cortex-a7_neon-vfpv4` | ✅ 本项目适用 |
+| arm64 (aarch64) | `sulinggg/openwrt:arm64_armv8-a` | 64位 ARM 设备 |
+| amd64 (x86_64) | `openwrt/rootfs:latest`（官方） | x86 设备 |
+
+## 六、验证镜像完整性
+
+```bash
+# 查看镜像信息
+docker images sulinggg/openwrt
+
+# 检查架构
+docker inspect sulinggg/openwrt:arm_cortex-a7_neon-vfpv4 | grep Architecture
+
+# 启动并检查
+docker run --rm sulinggg/openwrt:arm_cortex-a7_neon-vfpv4 cat /proc/cpuinfo
+```
